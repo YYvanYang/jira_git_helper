@@ -140,6 +140,7 @@ pub fn prompt_for_commit_message() -> String {
 }
 
 pub fn run_git_commit(commit_message: &str) -> Result<(), &'static str> {
+    println!("Running git commit with message: \"{}\"", commit_message);
     let status = Command::new("git")
         .arg("commit")
         .arg("-m")
