@@ -77,12 +77,16 @@ pub async fn get_jira_title(jira_id: &str, config: &Config) -> Result<String, &'
         headers.insert("X-Atlassian-Token", xsrf_token.parse().unwrap());
     }
 
+    // println!("Sending request to: {}", jira_api_url);
     let response = client
         .get(&jira_api_url)
         .headers(headers)
         .send()
         .await
-        .map_err(|_| "Failed to send request")?;
+        .map_err(|err| {
+            println!("Error sending request: {}", err);
+            "Failed to send request"
+        })?;
 
     if response.status().is_success() {
         let issue: JiraIssue = response.json().await.map_err(|_| "Failed to parse JSON response")?;
