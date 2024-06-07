@@ -1,12 +1,12 @@
 pub mod config;
 
-use config::{write_config, Config};
-use regex::Regex;
-use reqwest::header::{COOKIE, SET_COOKIE};
-use reqwest::Client;
-use serde::Deserialize;
-use std::io::{self, Write};
 use std::process::Command;
+use std::io::{self, Write};
+use reqwest::Client;
+use reqwest::header::{COOKIE, SET_COOKIE};
+use regex::Regex;
+use config::{write_config, Config};
+use serde::Deserialize;
 
 pub async fn get_current_branch() -> Result<String, &'static str> {
     let output = Command::new("git")
@@ -147,26 +147,16 @@ pub fn prompt_for_config() -> Config {
 }
 
 pub fn prompt_for_commit_message() -> String {
-    print!("Enter additional commit message: ");
-    io::stdout().flush().unwrap();
-
-    let mut additional_message = String::new();
-    io::stdin().read_line(&mut additional_message).unwrap();
-    additional_message.trim().to_string()
+    prompt_for_input("Enter additional commit message", None)
 }
 
 pub fn confirm_commit(commit_message: &str) -> bool {
     println!("Git commit command: git commit -m \"{}\"", commit_message);
-    print!("Do you want to proceed? (y/n): ");
-    io::stdout().flush().unwrap();
-
-    let mut input = String::new();
-    io::stdin().read_line(&mut input).unwrap();
-    matches!(input.trim().to_lowercase().as_str(), "y" | "yes")
+    let input = prompt_for_input("Do you want to proceed? (y/n)", Some("y"));
+    matches!(input.to_lowercase().as_str(), "y" | "yes" | "")
 }
 
 pub fn run_git_commit(commit_message: &str) -> Result<(), &'static str> {
-    println!("Running git commit with message: \"{}\"", commit_message);
     let status = Command::new("git")
         .arg("commit")
         .arg("-m")
