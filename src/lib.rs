@@ -1,12 +1,12 @@
 pub mod config;
 
-use std::process::Command;
-use std::io::{self, Write};
-use reqwest::Client;
-use reqwest::header::{COOKIE, SET_COOKIE};
+use config::{write_config, Config};
 use regex::Regex;
-use config::{Config, write_config};
+use reqwest::header::{COOKIE, SET_COOKIE};
+use reqwest::Client;
 use serde::Deserialize;
+use std::io::{self, Write};
+use std::process::Command;
 
 pub async fn get_current_branch() -> Result<String, &'static str> {
     let output = Command::new("git")
@@ -32,7 +32,10 @@ pub async fn login_to_jira(config: &mut Config) -> Result<(), &'static str> {
     let login_url = format!("{}/rest/gadget/1.0/login", config.jira_url);
     let client = Client::new();
 
-    let params = [("os_username", &config.username), ("os_password", &config.password)];
+    let params = [
+        ("os_username", &config.username),
+        ("os_password", &config.password),
+    ];
     let response = client
         .post(&login_url)
         .form(&params)
@@ -65,7 +68,7 @@ pub async fn login_to_jira(config: &mut Config) -> Result<(), &'static str> {
     Ok(())
 }
 
-pub async fn get_jira_title(jira_id: &str, config: &Config) -> Result<String, &'static str> {
+pub async fn get_jira_title(jira_id: &str, config: &mut Config) -> Result<String, &'static str> {
     let jira_api_url = format!("{}/rest/api/2/issue/{}", config.jira_url, jira_id);
     let client = Client::new();
 
@@ -77,18 +80,30 @@ pub async fn get_jira_title(jira_id: &str, config: &Config) -> Result<String, &'
         headers.insert("X-Atlassian-Token", xsrf_token.parse().unwrap());
     }
 
-    // println!("Sending request to: {}", jira_api_url);
     let response = client
         .get(&jira_api_url)
         .headers(headers)
         .send()
         .await
-        .map_err(|err| {
-            println!("Error sending request: {}", err);
-            "Failed to send request"
-        })?;
+        .map_err(|_| "Failed to send request")?;
 
-    if response.status().is_success() {
+    if response.status() == reqwest::StatusCode::UNAUTHORIZED || response.status() == reqwest::StatusCode::FORBIDDEN {
+        login_to_jira(config).await?;
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert(COOKIE, config.jsessionid.as_ref().unwrap().parse().unwrap());
+        headers.insert("X-Atlassian-Token", config.xsrf_token.as_ref().unwrap().parse().unwrap());
+        let response = client
+            .get(&jira_api_url)
+            .headers(headers)
+            .send()
+            .await
+            .map_err(|_| "Failed to send request")?;
+        if !response.status().is_success() {
+            return Err("Failed to get JIRA issue");
+        }
+        let issue: JiraIssue = response.json().await.map_err(|_| "Failed to parse JSON response")?;
+        Ok(issue.fields.summary)
+    } else if response.status().is_success() {
         let issue: JiraIssue = response.json().await.map_err(|_| "Failed to parse JSON response")?;
         Ok(issue.fields.summary)
     } else {
@@ -106,26 +121,27 @@ struct JiraFields {
     summary: String,
 }
 
-pub fn prompt_for_config() -> Config {
-    let prompt = |msg: &str, default: &str| -> String {
-        print!("{}", msg);
-        io::stdout().flush().unwrap();
-        let mut input = String::new();
-        io::stdin().read_line(&mut input).unwrap();
-        let input = input.trim().to_string();
-        if input.is_empty() {
-            default.to_string()
-        } else {
-            input
-        }
-    };
+pub fn prompt_for_input(prompt: &str, default: Option<&str>) -> String {
+    print!("{} [{}]: ", prompt, default.unwrap_or(""));
+    io::stdout().flush().unwrap();
 
-    let jira_url = prompt("Enter your JIRA URL: ", "");
-    let username = prompt("Enter your domain username: ", "");
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).unwrap();
+    let input = input.trim().to_string();
+    if input.is_empty() {
+        default.unwrap_or("").to_string()
+    } else {
+        input
+    }
+}
+
+pub fn prompt_for_config() -> Config {
+    let jira_url = prompt_for_input("Enter your JIRA URL", None);
+    let username = prompt_for_input("Enter your domain username", None);
     print!("Enter your domain password: ");
     io::stdout().flush().unwrap();
     let password = rpassword::read_password().expect("Failed to read password");
-    let jira_id_prefix = prompt("Enter your JIRA ID prefix: ", "JIRA");
+    let jira_id_prefix = prompt_for_input("Enter your JIRA ID prefix", Some("JIRA"));
 
     Config { username, password, jira_url, jira_id_prefix, jsessionid: None, xsrf_token: None }
 }
@@ -137,6 +153,16 @@ pub fn prompt_for_commit_message() -> String {
     let mut additional_message = String::new();
     io::stdin().read_line(&mut additional_message).unwrap();
     additional_message.trim().to_string()
+}
+
+pub fn confirm_commit(commit_message: &str) -> bool {
+    println!("Git commit command: git commit -m \"{}\"", commit_message);
+    print!("Do you want to proceed? (y/n): ");
+    io::stdout().flush().unwrap();
+
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).unwrap();
+    matches!(input.trim().to_lowercase().as_str(), "y" | "yes")
 }
 
 pub fn run_git_commit(commit_message: &str) -> Result<(), &'static str> {

@@ -1,7 +1,7 @@
 use jira_git_helper::{
     config::{read_config, write_config, reset_config},
     extract_jira_id, get_current_branch, get_jira_title, login_to_jira, prompt_for_commit_message,
-    prompt_for_config, run_git_commit,
+    prompt_for_config, run_git_commit, confirm_commit,
 };
 use tokio;
 use std::env;
@@ -31,7 +31,7 @@ async fn main() {
         .expect("Failed to get current branch");
     let jira_id = extract_jira_id(&branch_name, &config.jira_id_prefix).expect("JIRA ID not found in branch name");
 
-    let jira_title = get_jira_title(jira_id, &config)
+    let jira_title = get_jira_title(jira_id, &mut config)
         .await
         .expect("Failed to get JIRA title");
 
@@ -41,5 +41,9 @@ async fn main() {
     let additional_message = prompt_for_commit_message();
     let commit_message = format!("[{}] {} {}", jira_id, jira_title, additional_message);
 
-    run_git_commit(&commit_message).expect("Failed to run git commit");
+    if confirm_commit(&commit_message) {
+        run_git_commit(&commit_message).expect("Failed to run git commit");
+    } else {
+        println!("Commit cancelled.");
+    }
 }
