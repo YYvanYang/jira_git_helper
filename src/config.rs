@@ -5,8 +5,9 @@ use dirs::home_dir;
 use ring::{aead, rand};
 use ring::rand::SecureRandom;
 use base64::{encode, decode};
+use ring::error::Unspecified;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Config {
     pub username: String,
     pub password: String,
@@ -20,7 +21,7 @@ impl Config {
     pub fn new(username: String, password: String, jira_url: String, jira_id_prefix: String) -> Self {
         Config {
             username,
-            password: encrypt_password(&password),
+            password: encrypt_password(&password).unwrap(),
             jira_url,
             jira_id_prefix,
             jsessionid: None,
@@ -49,7 +50,7 @@ pub fn read_config() -> Result<Config, &'static str> {
 
 pub fn write_config(config: &Config) -> Result<(), &'static str> {
     let mut config = config.clone();
-    config.password = encrypt_password(&config.password);
+    config.password = encrypt_password(&config.password).unwrap();
     let config_data = serde_json::to_string(&config).map_err(|_| "Failed to serialize config data")?;
     let config_path = get_config_path();
     fs::write(config_path, config_data).map_err(|_| "Failed to write config file")
@@ -64,37 +65,44 @@ pub fn reset_config() -> Result<(), &'static str> {
     }
 }
 
-fn encrypt_password(password: &str) -> String {
+fn encrypt_password(password: &str) -> Result<String, Unspecified> {
     let mut key = [0; 32];
     let rng = rand::SystemRandom::new();
-    rng.fill(&mut key).unwrap();
+    rng.fill(&mut key)?;
 
-    let nonce = aead::Nonce::assume_unique_for_key([0; 12]);
-    let unbound_key = aead::UnboundKey::new(&aead::AES_256_GCM, &key).unwrap();
+    let mut nonce_bytes = [0; 12];
+    rng.fill(&mut nonce_bytes)?;
+    let nonce = aead::Nonce::assume_unique_for_key(nonce_bytes);
+    let unbound_key = aead::UnboundKey::new(&aead::AES_256_GCM, &key)?;
     let sealing_key = aead::LessSafeKey::new(unbound_key);
 
     let mut in_out = password.as_bytes().to_vec();
-    sealing_key.seal_in_place_append_tag(nonce, aead::Aad::empty(), &mut in_out).unwrap();
+    sealing_key.seal_in_place_append_tag(nonce, aead::Aad::empty(), &mut in_out)?;
 
-    let mut result = key.to_vec();
-    result.extend(nonce.as_ref());
-    result.extend(in_out);
+    let mut result = Vec::new();
+    result.extend_from_slice(&key);
+    result.extend_from_slice(&nonce_bytes);
+    result.extend_from_slice(&in_out);
 
-    encode(&result)
+    Ok(encode(&result))
 }
 
-fn decrypt_password(encoded: &str) -> Result<String, aead::Unspecified> {
-    let decoded = decode(encoded).unwrap();
+fn decrypt_password(encoded: &str) -> Result<String, Unspecified> {
+    let decoded = decode(encoded).map_err(|_| Unspecified)?;
+
+    if decoded.len() < 44 {
+        return Err(Unspecified);
+    }
 
     let key = &decoded[0..32];
-    let nonce = aead::Nonce::assume_unique_for_key(decoded[32..44].try_into().unwrap());
+    let nonce = aead::Nonce::assume_unique_for_key(decoded[32..44].try_into().map_err(|_| Unspecified)?);
     let ciphertext = &decoded[44..];
 
-    let unbound_key = aead::UnboundKey::new(&aead::AES_256_GCM, key).unwrap();
+    let unbound_key = aead::UnboundKey::new(&aead::AES_256_GCM, key).map_err(|_| Unspecified)?;
     let opening_key = aead::LessSafeKey::new(unbound_key);
 
     let mut in_out = ciphertext.to_vec();
-    let plaintext = opening_key.open_in_place(nonce, aead::Aad::empty(), &mut in_out)?;
+    let plaintext = opening_key.open_in_place(nonce, aead::Aad::empty(), &mut in_out).map_err(|_| Unspecified)?;
 
-    Ok(String::from_utf8(plaintext.to_vec()).unwrap())
+    Ok(String::from_utf8(plaintext.to_vec()).map_err(|_| Unspecified)?)
 }
