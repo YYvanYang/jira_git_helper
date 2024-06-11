@@ -31,7 +31,7 @@ async fn main() {
         .expect("Failed to get current branch");
     let jira_id = extract_jira_id(&branch_name, &config.jira_id_prefix).expect("JIRA ID not found in branch name");
 
-    let jira_title = get_jira_title(jira_id, &mut config)
+    let jira_title = get_jira_title(&jira_id, &mut config)
         .await
         .expect("Failed to get JIRA title");
 

@@ -23,9 +23,9 @@ pub async fn get_current_branch() -> Result<String, &'static str> {
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 
-pub fn extract_jira_id<'a>(branch_name: &'a str, jira_id_prefix: &str) -> Option<&'a str> {
-    let re = Regex::new(&format!(r"{}-\d+", regex::escape(jira_id_prefix))).unwrap();
-    re.find(branch_name).map(|m| m.as_str())
+pub fn extract_jira_id<'a>(branch_name: &'a str, jira_id_prefix: &str) -> Option<String> {
+    let re = Regex::new(&format!(r"(?i){}-\d+", regex::escape(jira_id_prefix))).unwrap();
+    re.find(branch_name).map(|m| m.as_str().to_uppercase())
 }
 
 pub async fn login_to_jira(config: &mut Config) -> Result<(), &'static str> {

@@ -4,7 +4,7 @@ use jira_git_helper::extract_jira_id;
 #[test]
 fn test_extract_jira_id() {
     let branch_name = "feature/JIRA-1234-add-login-feature";
-    assert_eq!(extract_jira_id(branch_name, "JIRA"), Some("JIRA-1234"));
+    assert_eq!(extract_jira_id(branch_name, "JIRA"), Some(String::from("JIRA-1234")));
 }
 
 #[tokio::test]

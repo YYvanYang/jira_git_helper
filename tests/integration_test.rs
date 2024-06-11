@@ -16,7 +16,7 @@ async fn test_integration() {
     let branch_name = "feature/JIRA-1234-add-login-feature";
     let jira_id = extract_jira_id(branch_name, &config.jira_id_prefix).expect("Failed to extract JIRA ID");
 
-    let jira_title = get_jira_title(jira_id, &config)
+    let jira_title = get_jira_title(&jira_id, &mut config)
         .await
         .expect("Failed to get JIRA title");
     assert!(!jira_title.is_empty(), "JIRA title should not be empty");
