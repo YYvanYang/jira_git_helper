@@ -6,7 +6,7 @@ async fn main() -> Result<(), AppError> {
     let args: Vec<String> = env::args().collect();
 
     if args.len() > 1 && args[1] == "reset" {
-        jira_git_helper::config::reset_config()?;
+        jira_git_helper::app_config::reset_config()?;
         println!("Configuration reset successfully.");
         return Ok(());
     }

@@ -1,7 +1,7 @@
 use thiserror::Error;
-use config::Config as AppConfig;
+use config::Config;
 
-pub mod config;
+pub mod app_config;
 pub mod git;
 pub mod jira;
 pub mod input;
@@ -25,14 +25,14 @@ pub enum AppError {
 }
 
 pub struct App {
-    config: AppConfig,
+    config: Config,
     jira_client: jira::JiraClient,
     git_ops: git::GitOperations,
 }
 
 impl App {
     pub async fn new() -> Result<Self, AppError> {
-        let config = config::load_config()?;
+        let config = app_config::load_config()?;
         let jira_client = jira::JiraClient::new(&config);
         let git_ops = git::GitOperations::new();
 

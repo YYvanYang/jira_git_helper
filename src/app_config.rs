@@ -61,15 +61,15 @@ pub fn get_config_path() -> PathBuf {
 
 fn encrypt_password(password: &str) -> Result<String, ConfigError> {
     let mut key = [0; 32];
-    let mut nonce = [0; 12];
+    let mut nonce_bytes = [0; 12];
     let rng = rand::SystemRandom::new();
 
     rng.fill(&mut key)
         .map_err(|_| ConfigError::Message("Failed to generate encryption key".to_string()))?;
-    rng.fill(&mut nonce)
+    rng.fill(&mut nonce_bytes)
         .map_err(|_| ConfigError::Message("Failed to generate nonce".to_string()))?;
 
-    let nonce = aead::Nonce::assume_unique_for_key(nonce);
+    let nonce = aead::Nonce::assume_unique_for_key(nonce_bytes);
     let aad = aead::Aad::empty();
 
     let mut in_out = password.as_bytes().to_vec();
@@ -81,9 +81,9 @@ fn encrypt_password(password: &str) -> Result<String, ConfigError> {
     sealing_key.seal_in_place_append_tag(nonce, aad, &mut in_out)
         .map_err(|_| ConfigError::Message("Failed to encrypt password".to_string()))?;
 
-    let mut result = Vec::with_capacity(key.len() + nonce.as_ref().len() + in_out.len());
+    let mut result = Vec::with_capacity(key.len() + nonce_bytes.len() + in_out.len());
     result.extend_from_slice(&key);
-    result.extend_from_slice(nonce.as_ref());
+    result.extend_from_slice(&nonce_bytes);
     result.extend_from_slice(&in_out);
 
     Ok(general_purpose::STANDARD_NO_PAD.encode(result))
@@ -98,9 +98,9 @@ fn decrypt_password(encrypted: &str) -> Result<String, ConfigError> {
     }
 
     let (key, rest) = decoded.split_at(32);
-    let (nonce, ciphertext) = rest.split_at(12);
+    let (nonce_bytes, ciphertext) = rest.split_at(12);
 
-    let nonce = aead::Nonce::try_assume_unique_for_key(nonce)
+    let nonce = aead::Nonce::try_assume_unique_for_key(nonce_bytes)
         .map_err(|_| ConfigError::Message("Invalid nonce".to_string()))?;
     let aad = aead::Aad::empty();
 
