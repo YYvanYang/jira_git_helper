@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 use std::fs;
+use std::env;
 use dirs::home_dir;
 use serde::{Deserialize, Serialize};
 use config::{Config, ConfigError, File};
@@ -54,7 +55,8 @@ pub fn save_config(config: &AppConfig) -> Result<(), ConfigError> {
 }
 
 pub fn get_config_path() -> PathBuf {
-    let mut config_path = home_dir().expect("Could not find home directory");
+    let home = env::var("JIRA_GIT_HOME").unwrap_or_else(|_| home_dir().expect("Could not find home directory").to_string_lossy().into_owned());
+    let mut config_path = PathBuf::from(home);
     config_path.push(".jira_git_helper.toml");
     config_path
 }
