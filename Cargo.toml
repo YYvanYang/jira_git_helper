@@ -1,28 +1,43 @@
 [package]
 name = "jira_git_helper"
 version = "0.1.0"
-authors = ["Your Name <your.email@example.com>"]
 edition = "2021"
-description = "A CLI tool to automate Git commit messages with JIRA integration"
+authors = ["Your Name <your.email@example.com>"]
+description = "A tool to automate JIRA-related Git commit tasks"
 license = "MIT"
-repository = "https://github.com/yourusername/jira_git_helper"
-homepage = "https://github.com/yourusername/jira_git_helper"
-documentation = "https://docs.rs/jira_git_helper"
+repository = "https://github.com/YYvanYang/jira_git_helper"
 readme = "README.md"
+keywords = ["jira", "git", "automation", "cli"]
+categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
-reqwest = { version = "0.11", features = ["json", "gzip"] }
+tokio = { version = "1.28", features = ["full"] }
+reqwest = { version = "0.11", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-regex = "1.5"
-rpassword = "5.0"
-dirs = "4.0"
-base64 = "0.13"
-ring = "0.16.20"
-tokio = { version = "1", features = ["full"] }
+config = "0.13"
+thiserror = "1.0"
+anyhow = "1.0"
+regex = "1.8"
+lazy_static = "1.4"
+ring = "0.16"
+base64 = "0.21"
+dirs = "5.0"
+toml = "0.7"
+clap = { version = "4.3", features = ["derive"] }
+log = "0.4"
+env_logger = "0.10"
+rpassword = "7.2"
 
-[package.metadata.docs.rs]
-features = ["json"]
+[dev-dependencies]
+mockito = "1.1"
+tempfile = "3.5"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = 'abort'
 
 [[bin]]
 name = "jira_git_helper"
