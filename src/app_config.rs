@@ -30,35 +30,50 @@ impl AppConfig {
         })
     }
 
-    pub fn get_password(&self) -> Result<String, ConfigError> {
+    pub fn get_password(&self) -> Result<String, AppError> {
         self.encrypted_password
             .as_ref()
-            .ok_or_else(|| ConfigError::Message("Password not set".to_string()))
-            .and_then(|enc_pass| decrypt_password(enc_pass))
+            .ok_or_else(|| AppError::Config(ConfigError::NotFound("Password not set".to_string())))
+            .and_then(|enc_pass| decrypt_password(enc_pass).map_err(AppError::Config))
     }
 }
 
 pub fn load_config() -> Result<Config, AppError> {
     let config_path = get_config_path();
+    
+    // 创建初始配置
     let config = Config::builder()
         .add_source(File::with_name(config_path.to_str().unwrap()).required(false))
         .add_source(config::Environment::with_prefix("JIRA_GIT"))
-        .build()?;  // This will automatically convert ConfigError to AppError
+        .build()
+        .map_err(AppError::Config)?;
 
-    // Check if required configurations are present
-    if config.get_string("jira_url").is_err() || config.get_string("username").is_err() {
+    // 检查必要的配置项
+    if config.get_string("jira_url").is_err() || config.get_string("username").is_err() || config.get_string("encrypted_password").is_err() {
         return Err(AppError::ConfigMissing);
     }
+
+    // 处理加密密码
+    let encrypted_password = config.get_string("encrypted_password").map_err(AppError::Config)?;
+    let decrypted_password = decrypt_password(&encrypted_password).map_err(AppError::Config)?;
+    
+    // 创建新的 builder，包含原始配置和解密后的密码
+    let config = Config::builder()
+        .add_source(config.clone())
+        .set_override("password", decrypted_password)
+        .map_err(AppError::Config)?
+        .build()
+        .map_err(AppError::Config)?;
 
     Ok(config)
 }
 
-pub fn save_config(config: &AppConfig) -> Result<(), ConfigError> {
+pub fn save_config(config: &AppConfig) -> Result<(), AppError> {
     let config_path = get_config_path();
     let config_str = toml::to_string_pretty(config)
-        .map_err(|e| ConfigError::Message(format!("Failed to serialize config: {}", e)))?;
+        .map_err(|e| AppError::Config(ConfigError::Message(format!("Failed to serialize config: {}", e))))?;
     fs::write(config_path, config_str)
-        .map_err(|e| ConfigError::Message(format!("Failed to write config file: {}", e)))
+        .map_err(|e| AppError::Config(ConfigError::Message(format!("Failed to write config file: {}", e))))
 }
 
 pub fn get_config_path() -> PathBuf {
@@ -126,11 +141,11 @@ fn decrypt_password(encrypted: &str) -> Result<String, ConfigError> {
         .map_err(|_| ConfigError::Message("Failed to convert decrypted password to string".to_string()))
 }
 
-pub fn reset_config() -> Result<(), ConfigError> {
+pub fn reset_config() -> Result<(), AppError> {
     let config_path = get_config_path();
     if config_path.exists() {
         fs::remove_file(config_path)
-            .map_err(|e| ConfigError::Message(format!("Failed to remove config file: {}", e)))
+            .map_err(|e| AppError::Config(ConfigError::Message(format!("Failed to remove config file: {}", e))))
     } else {
         Ok(())
     }
