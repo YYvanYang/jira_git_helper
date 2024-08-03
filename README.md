@@ -39,7 +39,13 @@ cargo install --path .
 首次运行时，工具会提示输入必要的配置信息：
 
 ```bash
-jira_git_helper
+jira_git_helper -c
+```
+
+或
+
+```bash
+jira_git_helper --config
 ```
 
 ### 配置文件
@@ -52,6 +58,8 @@ username = "your_username"
 encrypted_password = "encrypted_password_string"
 jira_id_prefix = "PROJ"
 ```
+
+注意：不要手动编辑 `encrypted_password` 字段，它由程序自动生成和管理。
 
 ### 环境变量
 
@@ -66,8 +74,16 @@ export JIRA_GIT_JIRA_ID_PREFIX=PROJ
 
 ### 重置配置
 
+要重置所有配置，运行：
+
 ```bash
-jira_git_helper reset
+jira_git_helper -r
+```
+
+或
+
+```bash
+jira_git_helper --reset
 ```
 
 ## 使用方法
@@ -82,6 +98,20 @@ jira_git_helper reset
 3. 工具会自动提取 JIRA ID，获取 issue 标题，并提示您输入额外的提交信息。
 
 4. 确认生成的提交信息后，工具会执行 `git commit` 命令。
+
+## 帮助
+
+要查看所有可用的命令和选项，运行：
+
+```bash
+jira_git_helper -h
+```
+
+或
+
+```bash
+jira_git_helper --help
+```
 
 ## 本地开发
 
@@ -104,7 +134,7 @@ cargo build
 cargo run
 
 # 运行并传递参数
-cargo run -- reset
+cargo run -- -c
 
 # 运行测试
 cargo test
