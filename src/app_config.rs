@@ -7,6 +7,8 @@ use config::{Config, ConfigError, File};
 use ring::{aead, rand};
 use ring::rand::SecureRandom;
 use base64::{engine::general_purpose, Engine as _};
+use crate::input;
+use crate::AppError;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AppConfig {
@@ -18,7 +20,7 @@ pub struct AppConfig {
 }
 
 impl AppConfig {
-    pub fn new(jira_url: String, username: String, password: String, jira_id_prefix: String) -> Result<Self, ConfigError> {
+    pub fn new(jira_url: String, username: String, password: String, jira_id_prefix: String) -> Result<Self, AppError> {
         let encrypted_password = Some(encrypt_password(&password)?);
         Ok(Self {
             jira_url,
@@ -127,4 +129,18 @@ pub fn reset_config() -> Result<(), ConfigError> {
     } else {
         Ok(())
     }
+}
+
+pub async fn create_interactive_config(existing_config: Option<AppConfig>) -> Result<AppConfig, AppError> {
+    println!("Welcome to JIRA Git Helper configuration!");
+    
+    let jira_url = input::prompt_for_input("Enter your JIRA URL:", existing_config.as_ref().map(|c| c.jira_url.as_str()))?;
+    let username = input::prompt_for_input("Enter your JIRA username:", existing_config.as_ref().map(|c| c.username.as_str()))?;
+    let password = input::prompt_for_password("Enter your JIRA password:")?;
+    let jira_id_prefix = input::prompt_for_input("Enter your JIRA project ID prefix:", existing_config.as_ref().map(|c| c.jira_id_prefix.as_str()))?;
+
+    let config = AppConfig::new(jira_url, username, password, jira_id_prefix)?;
+    save_config(&config)?;
+
+    Ok(config)
 }

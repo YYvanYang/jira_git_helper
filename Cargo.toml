@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Your Name <your.email@example.com>"]
 description = "A tool to automate JIRA-related Git commit tasks"
 license = "MIT"
-repository = "https://github.com/YYvanYang/jira_git_helper"
+repository = "https://github.com/YourUsername/jira_git_helper"
 readme = "README.md"
 keywords = ["jira", "git", "automation", "cli"]
 categories = ["command-line-utilities", "development-tools"]
@@ -38,6 +38,10 @@ opt-level = 3
 lto = true
 codegen-units = 1
 panic = 'abort'
+
+[lib]
+name = "jira_git_helper"
+path = "src/lib.rs"
 
 [[bin]]
 name = "jira_git_helper"

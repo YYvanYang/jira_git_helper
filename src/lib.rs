@@ -1,28 +1,15 @@
-use thiserror::Error;
 use config::Config;
 
+pub mod error;
 pub mod app_config;
 pub mod git;
 pub mod jira;
 pub mod input;
 
-#[derive(Error, Debug)]
-pub enum AppError {
-    #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
-    #[error("JIRA API error: {0}")]
-    JiraApi(String),
-    #[error("Git error: {0}")]
-    Git(String),
-    #[error("Config error: {0}")]
-    Config(#[from] config::ConfigError),
-    #[error("Reqwest error: {0}")]
-    Reqwest(#[from] reqwest::Error),
-    #[error("Serde JSON error: {0}")]
-    SerdeJson(#[from] serde_json::Error),
-    #[error("Other error: {0}")]
-    Other(String),
-}
+pub use error::AppError;
+pub use crate::app_config::AppConfig;
+pub use crate::jira::JiraClient;
+pub use crate::git::GitOperations;
 
 pub struct App {
     config: Config,
@@ -57,6 +44,7 @@ impl App {
 
         if input::confirm_commit(&commit_message) {
             self.git_ops.commit(&commit_message).await?;
+            println!("Commit successful!");
         } else {
             println!("Commit cancelled.");
         }
