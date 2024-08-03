@@ -6,6 +6,10 @@ pub enum AppError {
     Io(#[from] std::io::Error),
     #[error("Config error: {0}")]
     Config(#[from] config::ConfigError),
+    #[error("Config error: {0}")]
+    ConfigString(String),
+    #[error("Configuration is missing or incomplete")]
+    ConfigMissing,
     #[error("JIRA API error: {0}")]
     JiraApi(String),
     #[error("Git error: {0}")]

@@ -18,8 +18,15 @@ pub struct App {
 }
 
 impl App {
+
     pub async fn new() -> Result<Self, AppError> {
         let config = app_config::load_config()?;
+        
+        // 基本验证
+        if config.get_string("jira_url").is_err() || config.get_string("username").is_err() {
+            return Err(AppError::ConfigMissing);
+        }
+
         let jira_client = jira::JiraClient::new(&config);
         let git_ops = git::GitOperations::new();
 
@@ -29,7 +36,7 @@ impl App {
             git_ops,
         })
     }
-
+    
     pub async fn run(&mut self) -> Result<(), AppError> {
         let branch_name = self.git_ops.get_current_branch().await?;
         let jira_id = self.extract_jira_id(&branch_name)?;

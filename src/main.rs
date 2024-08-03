@@ -41,8 +41,14 @@ async fn main() -> Result<(), AppError> {
         return handle_reset_command().await;
     }
 
-    let mut app = App::new().await?;
-    app.run().await
+    match App::new().await {
+        Ok(mut app) => app.run().await,
+        Err(AppError::ConfigMissing) => {
+            println!("Configuration is missing or incomplete. Let's set it up!");
+            handle_config_command().await
+        }
+        Err(e) => Err(e),
+    }
 }
 
 fn handle_help_command() -> Result<(), AppError> {
@@ -69,6 +75,7 @@ async fn handle_config_command() -> Result<(), AppError> {
     println!("Starting JIRA Git Helper configuration...");
     app_config::create_interactive_config(None).await?;
     println!("Configuration updated successfully!");
+    println!("You can now run the program again to use JIRA Git Helper.");
     Ok(())
 }
 

@@ -38,12 +38,17 @@ impl AppConfig {
     }
 }
 
-pub fn load_config() -> Result<Config, ConfigError> {
+pub fn load_config() -> Result<Config, AppError> {
     let config_path = get_config_path();
     let config = Config::builder()
         .add_source(File::with_name(config_path.to_str().unwrap()).required(false))
         .add_source(config::Environment::with_prefix("JIRA_GIT"))
-        .build()?;
+        .build()?;  // This will automatically convert ConfigError to AppError
+
+    // Check if required configurations are present
+    if config.get_string("jira_url").is_err() || config.get_string("username").is_err() {
+        return Err(AppError::ConfigMissing);
+    }
 
     Ok(config)
 }
