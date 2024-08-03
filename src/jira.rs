@@ -39,11 +39,11 @@ struct SessionInfo {
 }
 
 impl JiraClient {
-    pub fn new(config: &Config) -> Self {
-        JiraClient {
+    pub fn new(config: &Config) -> Result<Self, AppError> {
+        Ok(JiraClient {
             client: Client::new(),
             config: config.clone(),
-        }
+        })
     }
 
     async fn login(&mut self) -> Result<(), AppError> {
@@ -67,7 +67,7 @@ impl JiraClient {
         let session_cookie = format!("{}={}", login_response.session.name, login_response.session.value);
 
         let mut headers = HeaderMap::new();
-        headers.insert(COOKIE, HeaderValue::from_str(&session_cookie).unwrap());
+        headers.insert(COOKIE, HeaderValue::from_str(&session_cookie).map_err(|e| AppError::JiraApi(e.to_string()))?);
 
         self.client = Client::builder()
             .default_headers(headers)

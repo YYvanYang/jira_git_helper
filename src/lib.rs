@@ -27,7 +27,7 @@ impl App {
             return Err(AppError::ConfigMissing);
         }
 
-        let jira_client = jira::JiraClient::new(&config);
+        let jira_client = jira::JiraClient::new(&config)?;
         let git_ops = git::GitOperations::new();
 
         Ok(Self {
@@ -36,7 +36,7 @@ impl App {
             git_ops,
         })
     }
-    
+
     pub async fn run(&mut self) -> Result<(), AppError> {
         let branch_name = self.git_ops.get_current_branch().await?;
         let jira_id = self.extract_jira_id(&branch_name)?;

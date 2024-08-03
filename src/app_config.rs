@@ -60,7 +60,7 @@ pub fn load_config() -> Result<Config, AppError> {
     // 创建新的 builder，包含原始配置和解密后的密码
     let config = Config::builder()
         .add_source(config.clone())
-        .set_override("password", decrypted_password)
+        .set_override("password", decrypted_password) // 这里设置解密后的密码
         .map_err(AppError::Config)?
         .build()
         .map_err(AppError::Config)?;
