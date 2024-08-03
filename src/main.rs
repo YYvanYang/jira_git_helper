@@ -1,4 +1,4 @@
-use clap::{Command, Arg};
+use clap::{Command, Arg, ArgAction};
 use jira_git_helper::{AppError, App, app_config};
 
 #[tokio::main]
@@ -7,25 +7,29 @@ async fn main() -> Result<(), AppError> {
         .version("1.0")
         .author("Your Name")
         .about("Automates JIRA-related Git commit tasks")
-        .arg(Arg::new("help")
-            .short('h')
-            .long("help")
-            .help("Prints help information"))
+        // .arg(Arg::new("help")
+        //     .short('h')
+        //     .long("help")
+        //     .help("Prints help information")
+        //     .action(ArgAction::SetTrue))
         .arg(Arg::new("windows_help")
             .help("Prints help information (Windows style)")
             .short('?')
-            .long("/?"))
+            .long("/?")
+            .action(ArgAction::SetTrue))
         .arg(Arg::new("config")
             .short('c')
             .long("config")
-            .help("Configure JIRA Git Helper settings"))
+            .help("Configure JIRA Git Helper settings")
+            .action(ArgAction::SetTrue))
         .arg(Arg::new("reset")
             .short('r')
             .long("reset")
-            .help("Reset all configurations"))
+            .help("Reset all configurations")
+            .action(ArgAction::SetTrue))
         .get_matches();
 
-    if matches.get_flag("help") || matches.get_flag("windows_help") {
+    if matches.get_flag("windows_help") {
         return handle_help_command();
     }
 
