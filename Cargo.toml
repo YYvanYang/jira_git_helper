@@ -2,10 +2,10 @@
 name = "jira_git_helper"
 version = "0.1.0"
 edition = "2021"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Yvan Yang <zjlgdx@gmail.com>"]
 description = "A tool to automate JIRA-related Git commit tasks"
 license = "MIT"
-repository = "https://github.com/YourUsername/jira_git_helper"
+repository = "https://github.com/YYvanYang/jira_git_helper"
 readme = "README.md"
 keywords = ["jira", "git", "automation", "cli"]
 categories = ["command-line-utilities", "development-tools"]
